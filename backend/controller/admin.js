@@ -82,10 +82,10 @@ class AdminController {
       });
 
     const token = jwt.sign(
-      { _id: admin._id, role: admin.role },
+      { _id: admin._id, role: admin.role, isActive: admin.isActive },
       process.env.SECRET_KEY,
       {
-        expiresIn: "1h",
+        expiresIn: "24h",
       }
     );
 
@@ -97,7 +97,17 @@ class AdminController {
   }
   async getProfile(req, res) {
     try {
-      let admin = await Admin.findById(req.user._id);
+      const id = req.admin._id;
+
+      const admin = await Admin.findById(id).select("-password");
+      if (!admin || !admin.isActive) {
+        return res.status(401).json({
+          msg: "invalid token",
+          variant: "error",
+          payload: null,
+        });
+      }
+
       res.status(200).json({
         msg: "Admin registered successfully",
         variant: "success",
@@ -114,18 +124,22 @@ class AdminController {
   async updateAdmin(req, res) {
     try {
       const { id } = req.params;
-
-      const existingAdmin = await Admin.findOne({
-        username: req.body.username,
-      });
-      if (existingAdmin && existingAdmin._id.toString() !== id)
+      if (req.body.password) {
+        return res.status(400).json({
+          msg: "PAssword kiritlmasligi kerak",
+          variant: "error",
+          payload: null,
+        });
+      }
+      const { username } = req.body;
+      const existingAdmin = await Admin.findOne({ username });
+      if (existingAdmin && id != existingAdmin._id?.toString())
         return res.status(400).json({
           msg: "Admin already exists.",
           variant: "error",
           payload: null,
         });
 
-      res.body.password = existingAdmin.password;
       let admin = await Admin.findByIdAndUpdate(id, req.body, { new: true });
       res.status(200).json({
         msg: "Admin updated",

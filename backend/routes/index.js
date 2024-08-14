@@ -5,7 +5,7 @@ import express from "express";
 
 const router = express.Router();
 
-router.get("/get/admins", AdminController.getAllAdmins);
+router.get("/get/admins", [auth], AdminController.getAllAdmins);
 router.post("/sign-up", AdminController.singUp);
 router.post("/sign-in", AdminController.signIn);
 router.post("/get/profile", [auth], AdminController.getProfile);

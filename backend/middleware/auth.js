@@ -4,30 +4,50 @@ import jwt from "jsonwebtoken";
 dotenv.config();
 
 export const auth = (req, res, next) => {
-  const token = req.headers.authorization;
+  const token = req.header("Authorization")?.split(" ")[1];
+
   if (!token) {
-    return res.status(400).json({
-      msg: "Token yoq",
-      variant: "warning",
+    return res.status(401).json({
+      msg: "Access denied.",
+      variant: "error",
       payload: null,
     });
   }
 
-  jwt.verify(
-    token.split(" ")[1],
-    process.env.SECRET_KEY,
-    function (err, decoded) {
+  try {
+    jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
       if (err) {
+        return res.status(401).json({
+          msg: "Invalid token.",
+          variant: "error",
+          payload: null,
+        });
+      }
+
+      if (!decoded.isActive) {
         return res.status(401).json({
           msg: "Token mos emas",
           variant: "warning",
           payload: null,
         });
-      } else {
-        console.log(decoded);
-        req.user = decoded;
-        next();
       }
-    }
-  );
+
+      if (decoded.role !== "admin") {
+        return res.status(401).json({
+          msg: "Invalid token.",
+          variant: "error",
+          payload: null,
+        });
+      }
+
+      req.admin = decoded;
+      return next();
+    });
+  } catch {
+    return res.status(401).json({
+      msg: "Invalid token.",
+      variant: "error",
+      payload: null,
+    });
+  }
 };
